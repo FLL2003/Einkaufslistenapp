@@ -15,6 +15,18 @@ col = db.collection('einkaufsliste')
 
 st.title("🛒 Einkauf")
 
+# Hol den Namen aus der URL, falls vorhanden
+query_params = st.query_params
+user_name = query_params.get("name", ["Familie"])[0] # Standard ist "Familie"
+
+# Nutze den Namen direkt bei der Eingabe
+st.write(f"Hallo {user_name}, was fügst du hinzu?")
+
+# Beim Speichern in Firebase:
+if st.form_submit_button("Hinzufügen"):
+    col.add({"text": item, "by": user_name, "bought": False})
+
+
 # Hinzufügen
 with st.form("add", clear_on_submit=True):
     item = st.text_input("", placeholder="Neues Item...")
