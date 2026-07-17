@@ -3,9 +3,8 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 import json
 
-# Firebase Initialisierung
+# --- 1. Firebase Initialisierung ---
 if not firebase_admin._apps:
-    # Hier laden wir den Key aus den Streamlit Secrets, die wir gerade konfiguriert haben
     key_dict = json.loads(st.secrets["FIREBASE_SERVICE_ACCOUNT"])
     cred = credentials.Certificate(key_dict)
     firebase_admin.initialize_app(cred)
@@ -13,41 +12,38 @@ if not firebase_admin._apps:
 db = firestore.client()
 col = db.collection('einkaufsliste')
 
-st.title("🛒 Einkauf")
+# --- 2. Benutzeroberfläche ---
+st.title("🛒 Einkaufsliste")
 
-# Hol den Namen aus der URL, falls vorhanden
+# Namen aus der URL holen (Standard: "Familie")
 query_params = st.query_params
-user_name = query_params.get("name", ["Familie"])[0] # Standard ist "Familie"
+user_name = query_params.get("name", ["Familie"])[0]
 
-# Nutze den Namen direkt bei der Eingabe
-st.write(f"Hallo {user_name}, was fügst du hinzu?")
+st.write(f"Hallo **{user_name}**, was fügst du heute hinzu?")
 
-# Beim Speichern in Firebase:
-if st.form_submit_button("Hinzufügen"):
-    col.add({"text": item, "by": user_name, "bought": False})
-
-
-# Hinzufügen
-with st.form("add", clear_on_submit=True):
-    item = st.text_input("", placeholder="Neues Item...")
-    person = st.text_input("", placeholder="Wer braucht es?")
-    if st.form_submit_button("Hinzufügen"):
-        col.add({"text": item, "by": person, "bought": False})
+# --- 3. Formular zum Hinzufügen ---
+with st.form("add_form", clear_on_submit=True):
+    item = st.text_input("Neues Produkt:")
+    # Wir nutzen hier direkt 'user_name' aus der URL, damit man es nicht eingeben muss
+    submitted = st.form_submit_button("Hinzufügen")
+    
+    if submitted and item:
+        col.add({"text": item, "by": user_name, "bought": False})
+        st.success(f"{item} wurde hinzugefügt!")
         st.rerun()
-
-# Liste
-items = col.where("bought", "==", False).stream()
-to_delete = []
 
 st.divider()
 
+# --- 4. Liste anzeigen & Löschen ---
+items = col.where("bought", "==", False).stream()
+to_delete = []
+
 for doc in items:
     data = doc.to_dict()
-    # Jedes Item als Checkbox
-    if st.checkbox(f"{data['text']}  — *{data['by']}*"):
+    # Checkbox zum Auswählen der erledigten Dinge
+    if st.checkbox(f"{data['text']} — von {data['by']}"):
         to_delete.append(doc.id)
 
-# Löschen
 if st.button("Gekaufte entfernen"):
     for doc_id in to_delete:
         col.document(doc_id).update({"bought": True})
