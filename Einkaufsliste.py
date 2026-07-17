@@ -1,11 +1,14 @@
 import streamlit as st
-from firebase_admin import credentials, firestore, initialize_app
+import firebase_admin
+from firebase_admin import credentials, firestore
+import json
 
-# Initialisierung (nur einmal ausführen)
-if not st.session_state.get('initialized'):
-    cred = credentials.Certificate("firebase-key.json")
-    initialize_app(cred)
-    st.session_state.initialized = True
+# Firebase Initialisierung
+if not firebase_admin._apps:
+    # Hier laden wir den Key aus den Streamlit Secrets, die wir gerade konfiguriert haben
+    key_dict = json.loads(st.secrets["FIREBASE_SERVICE_ACCOUNT"])
+    cred = credentials.Certificate(key_dict)
+    firebase_admin.initialize_app(cred)
 
 db = firestore.client()
 col = db.collection('einkaufsliste')
